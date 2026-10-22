@@ -1,38 +1,45 @@
 
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-geist);
+  --font-serif: var(--font-editorial);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
 :root {
   color-scheme: light;
-  font-family: Arial, sans-serif;
-  background: #f7f5f1;
-  color: #29251f;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --background: oklch(0.97 0.008 85);
+  --foreground: oklch(0.2 0.02 60);
+  --border: oklch(0.89 0.015 75);
+  --input: oklch(0.89 0.015 75);
+  --ring: oklch(0.42 0.02 60);
+  --font-geist: Arial, sans-serif;
+  --font-editorial: Georgia, serif;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
-  margin: 0;
+html {
+  background: #f7f5f1;
 }
 
 body {
-  min-width: 320px;
+  margin: 0;
   background: #f7f5f1;
+  color: var(--foreground);
+  font-family: var(--font-geist);
 }
 
 button,
 input {
   font: inherit;
-}
-
-button {
-  cursor: pointer;
 }

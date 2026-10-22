@@ -1,120 +1,217 @@
 
 import { useCallback, useMemo, useState } from 'react'
+import { Heart, Image as ImageIcon, Search } from 'lucide-react'
 import useFetchPhotos from './hooks/useEffectPhoto'
 import useFavourites from './hooks/useFavourite'
 
-function App() {
-  const { photos, loading, error } = useFetchPhotos()
-  const [search, setSearch] = useState('')
-  const { favourites, toggleFavourite } = useFavourites()
-
-  // Handles changes in the search input
-  const handleSearch = useCallback((event) => {
-    setSearch(event.target.value)
-  }, [])
-
-  // Filters the already-fetched photos by author
-  const filteredPhotos = useMemo(() => {
-    const query = search.trim().toLowerCase()
-
-    return photos.filter((photo) =>
-      photo.author.toLowerCase().includes(query)
-    )
-  }, [photos, search])
-
-  if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <div
-          className="h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600"
-          role="status"
-          aria-label="Loading photos"
-        />
-      </main>
-    )
-  }
-
-  if (error) {
-    return (
-      <main className="p-6 text-center">
-        <p className="text-red-600">
-          Failed to load photos: {error}
-        </p>
-      </main>
-    )
-  }
-
+function PhotoCard({ photo, isFavourite, onToggle }) {
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <h1 className="mb-6 text-3xl font-bold text-gray-900">
-          Photo Gallery
-        </h1>
-
-        <input
-          type="search"
-          placeholder="Search by author name..."
-          value={search}
-          onChange={handleSearch}
-          aria-label="Search photos by author"
-          className="mb-6 w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 sm:max-w-md"
+    <article className="group min-w-0 overflow-hidden rounded-[1.35rem] border border-stone-200/80 bg-white shadow-[0_10px_30px_-22px_rgba(58,42,31,0.4)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_-22px_rgba(58,42,31,0.5)]">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-stone-100">
+        <img
+          src={photo.download_url || `https://picsum.photos/id/${photo.id}/800/600`}
+          alt={`Photo by ${photo.author}`}
+          className="block size-full object-cover transition duration-500 group-hover:scale-105"
+          loading="lazy"
         />
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {filteredPhotos.map((photo) => {
-            const isFavourite = favourites.includes(photo.id)
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={
+            isFavourite
+              ? `Remove ${photo.author} from favourites`
+              : `Add ${photo.author} to favourites`
+          }
+          aria-pressed={isFavourite}
+          className={`absolute right-3 top-3 grid size-10 place-items-center rounded-full border backdrop-blur-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 ${
+            isFavourite
+              ? 'border-rose-200 bg-white text-rose-500'
+              : 'border-white/50 bg-black/20 text-white hover:bg-white hover:text-rose-500'
+          }`}
+        >
+          <Heart
+            size={19}
+            className={isFavourite ? 'fill-current' : ''}
+            aria-hidden="true"
+          />
+        </button>
+      </div>
 
-            return (
-              <article
-                key={photo.id}
-                className="overflow-hidden rounded-lg bg-white shadow-sm"
-              >
-                {/* Fixed 4:3 image container */}
-                <div className="aspect-[4/3] w-full overflow-hidden">
-                  <img
-                    src={photo.download_url}
-                    alt={`Photo by ${photo.author}`}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4">
-                  <p className="truncate font-medium text-gray-800">
-                    {photo.author}
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() => toggleFavourite(photo.id)}
-                    aria-label={
-                      isFavourite
-                        ? `Remove ${photo.author} from favourites`
-                        : `Add ${photo.author} to favourites`
-                    }
-                    aria-pressed={isFavourite}
-                    className={`ml-3 text-2xl transition-colors ${
-                      isFavourite
-                        ? 'text-red-500'
-                        : 'text-gray-400 hover:text-red-500'
-                    }`}
-                  >
-                    {isFavourite ? '♥' : '♡'}
-                  </button>
-                </div>
-              </article>
-            )
-          })}
+      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-stone-800">
+            {photo.author}
+          </p>
+          <p className="mt-0.5 text-[11px] uppercase tracking-[0.18em] text-stone-400">
+            Collection {photo.id}
+          </p>
         </div>
 
-        {filteredPhotos.length === 0 && (
-          <p className="py-10 text-center text-gray-600">
-            No photos found for "{search}".
+        {isFavourite && (
+          <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-500">
+            Saved
+          </span>
+        )}
+      </div>
+    </article>
+  )
+}
+
+function GallerySkeleton() {
+  return (
+    <div
+      className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
+      role="status"
+      aria-label="Loading photos"
+    >
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div
+          key={index}
+          className="overflow-hidden rounded-[1.35rem] border border-stone-200 bg-white"
+        >
+          <div className="aspect-[4/3] animate-pulse bg-stone-200" />
+          <div className="h-16 animate-pulse bg-stone-100" />
+        </div>
+      ))}
+      <span className="sr-only">Loading photos...</span>
+    </div>
+  )
+}
+
+export default function App() {
+  const { photos, loading, error } = useFetchPhotos()
+  const { favourites, toggleFavourite } = useFavourites()
+  const [query, setQuery] = useState('')
+
+  const handleSearch = useCallback((event) => {
+    setQuery(event.target.value)
+  }, [])
+
+  const filteredPhotos = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase()
+
+    if (!normalizedQuery) return photos
+
+    return photos.filter((photo) =>
+      photo.author.toLowerCase().includes(normalizedQuery)
+    )
+  }, [photos, query])
+
+  return (
+    <main className="min-h-screen w-full bg-[#f7f5f1] text-stone-900">
+      <header className="border-b border-stone-200/80 bg-[#f7f5f1]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
+          <div className="flex items-center gap-2.5">
+            <span className="grid size-9 place-items-center rounded-xl bg-stone-900 text-white">
+  
+            </span>
+
+            <span className="text-sm font-semibold tracking-[0.2em] text-stone-900">
+              FRAME / 30
+            </span>
+          </div>
+
+          <span className="hidden text-xs font-medium uppercase tracking-[0.18em] text-stone-400 sm:block">
+            A little visual archive
+          </span>
+        </div>
+      </header>
+
+      <div className="mx-auto w-full max-w-7xl px-5 pb-20 pt-14 sm:px-8 sm:pt-20 lg:px-12">
+        <section className="mb-12 flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
+          <div className="max-w-xl">
+            <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-rose-500">
+              <ImageIcon size={14} aria-hidden="true" />
+              Curated moments
+            </p>
+
+            <h1 className="font-serif text-5xl leading-[0.95] tracking-[-0.04em] text-stone-950 sm:text-6xl">
+              Find a little
+              <br />
+              <em className="font-normal text-stone-500">
+                inspiration.
+              </em>
+            </h1>
+
+            <p className="mt-6 max-w-md text-base leading-7 text-stone-500">
+              Thirty corners of the world, ready to be explored.
+              Search the collection or save the frames that stay
+              with you.
+            </p>
+          </div>
+
+          <div className="w-full max-w-sm">
+            <label
+              htmlFor="photo-search"
+              className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500"
+            >
+              Search by photographer
+            </label>
+
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-400"
+                size={18}
+                aria-hidden="true"
+              />
+
+              <input
+                id="photo-search"
+                type="search"
+                value={query}
+                onChange={handleSearch}
+                placeholder="Try “Paul” or “Alejandro”"
+                className="h-12 w-full rounded-2xl border border-stone-200 bg-white pl-11 pr-4 text-sm text-stone-900 shadow-sm outline-none transition placeholder:text-stone-400 focus:border-stone-400 focus:ring-4 focus:ring-stone-900/5"
+              />
+            </div>
+          </div>
+        </section>
+
+        <div className="mb-5 flex items-center justify-between border-b border-stone-200 pb-4">
+          <p className="text-sm font-medium text-stone-700">
+            {loading
+              ? 'Loading collection'
+              : `${filteredPhotos.length} ${
+                  filteredPhotos.length === 1 ? 'photo' : 'photos'
+                }`}
           </p>
+
+          <p className="text-xs uppercase tracking-[0.16em] text-stone-400">
+            {favourites.length} saved
+          </p>
+        </div>
+
+        {loading && <GallerySkeleton />}
+
+        {error && (
+          <div
+            role="alert"
+            className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-6 text-sm text-rose-700"
+          >
+            {String(error)}
+          </div>
+        )}
+
+        {!loading && !error && filteredPhotos.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-stone-300 bg-white px-5 py-16 text-center text-stone-500">
+            No photographers match “{query}”.
+          </div>
+        )}
+
+        {!loading && !error && filteredPhotos.length > 0 && (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {filteredPhotos.map((photo) => (
+              <PhotoCard
+                key={photo.id}
+                photo={photo}
+                isFavourite={favourites.includes(photo.id)}
+                onToggle={() => toggleFavourite(photo.id)}
+              />
+            ))}
+          </div>
         )}
       </div>
     </main>
   )
 }
-
-export default App
